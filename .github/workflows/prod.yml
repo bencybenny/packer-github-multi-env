@@ -1,0 +1,41 @@
+---
+name: "image creation for lakme-prod"
+on:
+  push:
+    branches:
+      - prod
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      packer_version: "1.9.4"
+
+    steps:
+
+      - name: "checkout repo"
+        uses: actions/checkout@v3
+
+      - name: "Packer installation"
+        uses: hashicorp/setup-packer@main
+        id: setup
+        with:
+          version: ${{ env.packer_version }}
+
+      - name: "packer init"
+        run: packer init ./packer/
+
+      - name: "packer validate"
+        run: packer validate -var-file="prod.pkvars.hcl" .
+        working-directory: ./packer/
+
+      - name: "format packer files"
+        run : packer fmt ..
+        working-directory: ./packer/
+
+      - name: "packer build image"
+        run: packer build -var-file="prod.pkvars.hcl" .
+        working-directory: ./packer/
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.prod_accesskey }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.prod_secretkey }}
+          AWS_DEFAULT_REGION: ${{ secrets.prod_region }}
